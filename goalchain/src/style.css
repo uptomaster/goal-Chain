@@ -1,0 +1,206 @@
+:root {
+  font-family: 'Pretendard Variable', 'Segoe UI', system-ui, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.9);
+  background-color: #1a1d23;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  --accent: #22c55e;
+  --accent-hover: #16a34a;
+  --danger: #ef4444;
+  --surface: #252830;
+  --border: #3f4551;
+  --muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+#app {
+  width: 100%;
+  max-width: 480px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  background: linear-gradient(135deg, #22c55e, #4ade80);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.main {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+}
+
+.goal-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.goal-form input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #1a1d23;
+  color: inherit;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.goal-form input:focus {
+  border-color: var(--accent);
+}
+
+.goal-form input::placeholder {
+  color: var(--muted);
+}
+
+.goal-form button {
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #0f172a;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.2s;
+}
+
+.goal-form button:hover {
+  background: var(--accent-hover);
+}
+
+.goal-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.goal-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  background: #1a1d23;
+  border: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.goal-item:hover {
+  background: #22262e;
+}
+
+.goal-item.completed .goal-text {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.goal-label {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+}
+
+.goal-label input[type='checkbox'] {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.goal-text {
+  flex: 1;
+  font-size: 1rem;
+  word-break: break-word;
+}
+
+.goal-delete {
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.goal-delete:hover {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.15);
+}
+
+.empty-message {
+  text-align: center;
+  color: var(--muted);
+  padding: 2rem;
+  margin: 0;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #1e293b;
+    background-color: #f1f5f9;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --muted: #64748b;
+  }
+
+  .goal-form input {
+    background: #f8fafc;
+    border-color: var(--border);
+  }
+
+  .goal-item {
+    background: #f8fafc;
+  }
+
+  .goal-item:hover {
+    background: #f1f5f9;
+  }
+}

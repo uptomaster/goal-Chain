@@ -1,0 +1,9 @@
+{
+  "name": "goalchain-root",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix goalchain",
+    "build": "npm run build --prefix goalchain",
+    "preview": "npm run preview --prefix goalchain"
+  }
+}
