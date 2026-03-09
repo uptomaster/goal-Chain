@@ -1,15 +1,65 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 
 /* ═══════════════════════════════════════════════════════
-   DATA
+   CONSTANTS & TOKEN REWARD
 ═══════════════════════════════════════════════════════ */
+const TOKEN_TASK = 10;
+const TOKEN_GOAL = 50;
+const TOKEN_CHAIN = 200;
+
+/* ═══════════════════════════════════════════════════════
+   AI GOAL CHAIN GENERATION (mock for MVP — swap for OpenAI/Claude API)
+═══════════════════════════════════════════════════════ */
+const TASK_TEMPLATES = {
+  개발: ["환경 설정", "기초 문법 학습", "튜토리얼 완료", "미니 프로젝트", "포트폴리오 제작", "취업 지원"],
+  취업: ["이력서 작성", "포트폴리오 정리", "기술 스택 학습", "면접 준비", "지원서 제출", "면접 참여"],
+  영어: ["단어 암기 (100개)", "문법 정리", "리스닝 연습", "스피킹 연습", "실전 모의고사", "목표 점수 달성"],
+  운동: ["1주차: 가벼운 워밍업", "2주차: 규칙적인 루틴", "3주차: 강도 올리기", "4주차: 목표 유지", "습관 확립"],
+  다이어트: ["식단 기록 시작", "기초 운동 도입", "식단 조절", "운동 강화", "목표 체중 달성"],
+  기상: ["첫 주: 알람 맞추기", "둘째 주: 점진적 조기", "셋째 주: 루틴 확립", "30일 유지"],
+  독서: ["도서 선정", "1권 읽기", "필사/메모", "2권 읽기", "독서록 작성"],
+  기타: ["1단계: 계획 수립", "2단계: 실행", "3단계: 검증", "4단계: 완성", "5단계: 유지"],
+};
+function pickKeyword(title) {
+  const t = title.toLowerCase();
+  if (t.includes("개발") || t.includes("코딩") || t.includes("프로그래밍")) return "개발";
+  if (t.includes("취업") || t.includes("이직")) return "취업";
+  if (t.includes("영어") || t.includes("토익") || t.includes("토플")) return "영어";
+  if (t.includes("운동") || t.includes("헬스") || t.includes("러닝")) return "운동";
+  if (t.includes("다이어트") || t.includes("체중")) return "다이어트";
+  if (t.includes("기상") || t.includes("早起")) return "기상";
+  if (t.includes("책") || t.includes("독서")) return "독서";
+  return "기타";
+}
+async function generateGoalChain(title) {
+  // Simulate API delay
+  await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
+  const key = pickKeyword(title);
+  const base = TASK_TEMPLATES[key] || TASK_TEMPLATES.기타;
+  const tasks = base.map((t, i) => ({
+    id: Date.now() + i,
+    title: typeof t === "string" ? t : t,
+    order: i + 1,
+    completed: false,
+    verified: false,
+    proof: null,
+  }));
+  return tasks;
+}
+
+/* ═══════════════════════════════════════════════════════
+   DATA (with task chains)
+═══════════════════════════════════════════════════════ */
+const DEFAULT_TASKS = (goalId, titles) =>
+  titles.map((t, i) => ({ id: goalId * 1000 + i, title: t, order: i + 1, completed: false, verified: false, proof: null }));
+
 const GOALS = [
-  { id:1, author:"민지", avatar:"🦊", title:"매일 새벽 6시 기상", category:"생활습관", deadline:"2025-04-30", chains:47, progress:72, joined:true,  color:"#FF4D00", glow:"rgba(255,77,0,0.5)",   members:["🦊","🐺","🦁","🐯","🦝","🐻","🦌","🦋"], desc:"30일 동안 6시 기상 챌린지. 함께하면 더 쉬워요!" },
-  { id:2, author:"준혁", avatar:"🐺", title:"책 한 달에 2권 읽기",  category:"자기계발", deadline:"2025-05-31", chains:32, progress:45, joined:false, color:"#00E5FF", glow:"rgba(0,229,255,0.5)",   members:["🐺","🦊","🐸","🦅","🐬"],            desc:"독서로 성장하는 우리들의 이야기" },
-  { id:3, author:"하은", avatar:"🦁", title:"주 3회 운동 습관",     category:"건강",    deadline:"2025-06-30", chains:89, progress:58, joined:false, color:"#39FF14", glow:"rgba(57,255,20,0.5)",    members:["🦁","🐯","🦊","🦌","🐻","🦋","🐺","🦝","🐸","🦅","🐬","🦄"], desc:"헬스, 러닝, 수영 뭐든 OK. 움직이는 것이 중요!" },
-  { id:4, author:"태양", avatar:"🐯", title:"하루 물 2L 마시기",    category:"건강",    deadline:"2025-04-15", chains:156,progress:91, joined:true,  color:"#FF00AA", glow:"rgba(255,0,170,0.5)",   members:["🐯","🦊","🦁","🐺","🦝","🐻","🦌","🦋","🐸","🦅","🐬","🦄","🐙","🦞"], desc:"가장 쉽지만 가장 중요한 습관" },
-  { id:5, author:"서연", avatar:"🦝", title:"SNS 하루 30분 제한",   category:"디톡스",  deadline:"2025-05-15", chains:23, progress:34, joined:false, color:"#FFD600", glow:"rgba(255,214,0,0.5)",   members:["🦝","🐻","🦌"],                       desc:"진짜 삶에 집중하기 위한 디지털 디톡스" },
-  { id:6, author:"준수", avatar:"🦅", title:"매일 명상 10분",       category:"자기계발",deadline:"2025-07-01", chains:61, progress:63, joined:false, color:"#BF5FFF", glow:"rgba(191,95,255,0.5)",  members:["🦅","🦊","🐸","🦌","🐯"],            desc:"하루 10분, 내면의 고요를 찾아서" },
+  { id:1, author:"민지", avatar:"🦊", title:"매일 새벽 6시 기상", category:"생활습관", deadline:"2025-04-30", chains:47, progress:72, joined:true,  color:"#FF4D00", glow:"rgba(255,77,0,0.5)",   members:["🦊","🐺","🦁","🐯","🦝","🐻","🦌","🦋"], desc:"30일 동안 6시 기상 챌린지. 함께하면 더 쉬워요!", tasks:DEFAULT_TASKS(1,["첫 주: 알람 맞추기","둘째 주: 점진적 조기","셋째 주: 루틴 확립","30일 유지"]), tokens:0 },
+  { id:2, author:"준혁", avatar:"🐺", title:"책 한 달에 2권 읽기",  category:"자기계발", deadline:"2025-05-31", chains:32, progress:45, joined:false, color:"#00E5FF", glow:"rgba(0,229,255,0.5)",   members:["🐺","🦊","🐸","🦅","🐬"],            desc:"독서로 성장하는 우리들의 이야기", tasks:DEFAULT_TASKS(2,["도서 선정","1권 읽기","필사/메모","2권 읽기","독서록 작성"]), tokens:0 },
+  { id:3, author:"하은", avatar:"🦁", title:"주 3회 운동 습관",     category:"건강",    deadline:"2025-06-30", chains:89, progress:58, joined:false, color:"#39FF14", glow:"rgba(57,255,20,0.5)",    members:["🦁","🐯","🦊","🦌","🐻","🦋","🐺","🦝","🐸","🦅","🐬","🦄"], desc:"헬스, 러닝, 수영 뭐든 OK. 움직이는 것이 중요!", tasks:DEFAULT_TASKS(3,["1주차: 가벼운 워밍업","2주차: 규칙적인 루틴","3주차: 강도 올리기","4주차: 목표 유지"]), tokens:0 },
+  { id:4, author:"태양", avatar:"🐯", title:"하루 물 2L 마시기",    category:"건강",    deadline:"2025-04-15", chains:156,progress:91, joined:true,  color:"#FF00AA", glow:"rgba(255,0,170,0.5)",   members:["🐯","🦊","🦁","🐺","🦝","🐻","🦌","🦋","🐸","🦅","🐬","🦄","🐙","🦞"], desc:"가장 쉽지만 가장 중요한 습관", tasks:DEFAULT_TASKS(4,["물병 준비","매일 기록","2L 달성","7일 연속 유지"]), tokens:0 },
+  { id:5, author:"서연", avatar:"🦝", title:"SNS 하루 30분 제한",   category:"디톡스",  deadline:"2025-05-15", chains:23, progress:34, joined:false, color:"#FFD600", glow:"rgba(255,214,0,0.5)",   members:["🦝","🐻","🦌"],                       desc:"진짜 삶에 집중하기 위한 디지털 디톡스", tasks:DEFAULT_TASKS(5,["사용시간 측정","앱 사용 제한 설정","1주 실천","습관화"]), tokens:0 },
+  { id:6, author:"준수", avatar:"🦅", title:"매일 명상 10분",       category:"자기계발",deadline:"2025-07-01", chains:61, progress:63, joined:false, color:"#BF5FFF", glow:"rgba(191,95,255,0.5)",  members:["🦅","🦊","🐸","🦌","🐯"],            desc:"하루 10분, 내면의 고요를 찾아서", tasks:DEFAULT_TASKS(6,["앱/장소 정하기","1주 연습","호흡법 익히기","10분 유지","습관화"]), tokens:0 },
 ];
 
 const CATS = ["ALL","생활습관","자기계발","건강","디톡스"];
@@ -371,6 +421,112 @@ function CoachPanel({goal,onClose}) {
 }
 
 /* ═══════════════════════════════════════════════════════
+   PROOF / VERIFICATION MODAL
+═══════════════════════════════════════════════════════ */
+function ProofModal({ task, goal, onSubmit, onClose }) {
+  const [proofType, setProofType] = useState("text");
+  const [text, setText] = useState("");
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [link, setLink] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    let proof = null;
+    if (proofType === "text" && text.trim()) proof = { type: "text", value: text.trim() };
+    else if (proofType === "photo" && photoUrl.trim()) proof = { type: "photo", value: photoUrl.trim() };
+    else if (proofType === "link" && link.trim()) proof = { type: "link", value: link.trim() };
+    if (!proof) return;
+    setSubmitting(true);
+    await onSubmit(task, proof);
+    setSubmitting(false);
+    onClose();
+  };
+
+  return (
+    <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(12px)",zIndex:350,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:"#0A0A0E",border:`1px solid ${goal.color}40`,borderRadius:24,padding:28,maxWidth:420,width:"100%",boxShadow:`0 0 60px ${goal.glow}`,animation:"riseIn .35s ease"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <span style={{fontSize:11,fontWeight:800,color:goal.color,letterSpacing:".12em",fontFamily:"'DM Mono',monospace"}}>PROOF 인증</span>
+          <button onClick={onClose} style={{background:"none",border:"none",color:"rgba(255,255,255,.4)",fontSize:20,cursor:"pointer"}}>×</button>
+        </div>
+        <h3 style={{fontSize:16,fontWeight:800,color:"white",marginBottom:6}}>{task.title}</h3>
+        <p style={{fontSize:12,color:"rgba(255,255,255,.4)",marginBottom:20}}>달성 완료를 인증해주세요</p>
+
+        <div style={{display:"flex",gap:6,marginBottom:16}}>
+          {["text","photo","link"].map(t=>(
+            <button key={t} onClick={()=>setProofType(t)} style={{
+              padding:"8px 14px",borderRadius:10,background:proofType===t?`${goal.color}30`:"rgba(255,255,255,.05)",
+              border:proofType===t?`1px solid ${goal.color}`:"1px solid rgba(255,255,255,.08)",
+              color:proofType===t?goal.color:"rgba(255,255,255,.5)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"inherit"
+            }}>{t==="text"?"📝 텍스트":t==="photo"?"📷 사진 URL":"🔗 링크"}</button>
+          ))}
+        </div>
+
+        {proofType==="text"&&<textarea value={text} onChange={e=>setText(e.target.value)} placeholder="예: 오늘 HTML 강의 수강 완료" rows={3} style={{width:"100%",marginBottom:16,resize:"none",background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",borderRadius:12,padding:12,color:"white",fontSize:14,outline:"none",fontFamily:"inherit"}}/>}
+        {proofType==="photo"&&<input value={photoUrl} onChange={e=>setPhotoUrl(e.target.value)} placeholder="이미지 URL을 입력하세요" style={{width:"100%",marginBottom:16,padding:12,borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"white",fontSize:14,outline:"none",fontFamily:"inherit"}}/>}
+        {proofType==="link"&&<input value={link} onChange={e=>setLink(e.target.value)} placeholder="예: GitHub 링크, 노션 링크" style={{width:"100%",marginBottom:16,padding:12,borderRadius:12,background:"rgba(255,255,255,.05)",border:"1px solid rgba(255,255,255,.1)",color:"white",fontSize:14,outline:"none",fontFamily:"inherit"}}/>}
+
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={onClose} style={{flex:1,padding:12,borderRadius:12,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.6)",fontSize:13,fontWeight:600,cursor:"pointer"}}>취소</button>
+          <button onClick={handleSubmit} disabled={submitting} style={{flex:2,padding:12,borderRadius:12,background:`linear-gradient(135deg,${goal.color},${goal.color}cc)`,border:"none",color:"white",fontSize:13,fontWeight:800,cursor:submitting?"not-allowed":"pointer",boxShadow:`0 4px 20px ${goal.glow}`}}>
+            {submitting?"처리 중...":"✓ 인증 제출"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHAIN VIEW (task chain visualization)
+═══════════════════════════════════════════════════════ */
+function ChainView({ goal, onVerify, onExpand, userTokens }) {
+  const tasks = goal.tasks || [];
+  const completed = tasks.filter(t => t.verified).length;
+  const progress = tasks.length ? Math.round((completed / tasks.length) * 100) : 0;
+
+  return (
+    <div style={{background:"rgba(255,255,255,.02)",border:`1px solid ${goal.color}25`,borderRadius:18,padding:20,marginBottom:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <span style={{fontSize:11,fontWeight:800,letterSpacing:".12em",color:goal.color,fontFamily:"'DM Mono',monospace"}}>GOAL CHAIN</span>
+        <span style={{fontSize:12,color:"rgba(255,255,255,.5)",fontFamily:"'DM Mono',monospace"}}>{completed}/{tasks.length} 완료</span>
+      </div>
+      <div style={{display:"flex",flexDirection:"column",gap:0}}>
+        {tasks.map((t, i) => (
+          <div key={t.id} style={{display:"flex",alignItems:"center",gap:12}}>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",flexShrink:0}}>
+              <div style={{width:36,height:36,borderRadius:"50%",background:t.verified?goal.color:"rgba(255,255,255,.08)",border:`2px solid ${t.verified?goal.color:"rgba(255,255,255,.15)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:t.verified?"white":"rgba(255,255,255,.35)",fontFamily:"'DM Mono',monospace"}}>
+                {t.verified?"✓":t.order}
+              </div>
+              {i < tasks.length - 1 && <div style={{width:2,height:20,background:t.verified?goal.color:"rgba(255,255,255,.1)",flex:1}}/>}
+            </div>
+            <div style={{flex:1,padding:"10px 0",borderBottom:i<tasks.length-1?"1px solid rgba(255,255,255,.05)":"none"}}>
+              <div style={{fontSize:14,fontWeight:t.verified?500:700,color:t.verified?"rgba(255,255,255,.5)":"white",textDecoration:t.verified?"line-through":"none"}}>{t.title}</div>
+              {t.proof&&<div style={{fontSize:11,color:"rgba(255,255,255,.35)",marginTop:4}}>인증: {t.proof.type==="text"?t.proof.value:t.proof.type==="link"?t.proof.value:"📷 이미지"}</div>}
+            </div>
+            {goal.joined && !t.verified && (
+              <button onClick={()=>onVerify(t)} style={{padding:"6px 12px",borderRadius:8,background:`${goal.color}20`,border:`1px solid ${goal.color}40`,color:goal.color,fontSize:11,fontWeight:700,cursor:"pointer",flexShrink:0}}>인증</button>
+            )}
+          </div>
+        ))}
+      </div>
+      {goal.joined && onExpand && (
+        <button onClick={onExpand} style={{width:"100%",marginTop:12,padding:10,borderRadius:10,border:"1px dashed rgba(255,255,255,.2)",background:"transparent",color:"rgba(255,255,255,.4)",fontSize:12,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+          <span>+</span> 체인 확장하기
+        </button>
+      )}
+      {userTokens !== undefined && (
+        <div style={{marginTop:14,padding:"10px 14px",background:"rgba(255,214,0,.08)",border:"1px solid rgba(255,214,0,.25)",borderRadius:12,display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:18}}>🪙</span>
+          <span style={{fontSize:14,fontWeight:800,color:"#FFD600",fontFamily:"'DM Mono',monospace"}}>{userTokens} Token</span>
+          <span style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>Task +{TOKEN_TASK} · Goal +{TOKEN_GOAL} · Chain +{TOKEN_CHAIN}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════
    PROGRESS ARC
 ═══════════════════════════════════════════════════════ */
 function Arc({progress,color,glow,size=70}) {
@@ -488,6 +644,9 @@ export default function App() {
     {id:3,text:"🦊 민지님 새 목표 개설!",time:"8분 전"},
     {id:4,text:"🦅 준수님 체인 50명 돌파!",time:"15분 전"},
   ]);
+  const [userTokens,setUserTokens]=useState(120);
+  const [proofModal,setProofModal]=useState(null);
+  const [creatingChain,setCreatingChain]=useState(false);
 
   const push=useCallback((n)=>{
     const id=Date.now()+Math.random();
@@ -524,9 +683,10 @@ export default function App() {
     setGoals(p=>p.map(x=>x.id===goal.id?{...x,progress:np}:x));
     setFeed(p=>[{id:Date.now(),text:`🦊 '${goal.title}' 달성 체크! (${np}%)`,time:"방금"},...p.slice(0,5)]);
     if(np>=100){
+      setUserTokens(t=>t+TOKEN_CHAIN);
       setConfetti(true); setTimeout(()=>setConfetti(false),3500);
       setCeleb({...goal,progress:100}); setCelebAI(null);
-      push({icon:"🏆",color:goal.color,title:"체인 완료! 🎉",body:`'${goal.title}' 완전 달성!`});
+      push({icon:"🏆",color:goal.color,title:"체인 완료! 🎉",body:`+${TOKEN_CHAIN} Token 획득! '${goal.title}' 완전 달성!`});
       genCelebration({...goal,progress:100}).then(d=>setCelebAI(d));
     } else {
       push({icon:"✅",color:goal.color,title:"달성 체크!",body:`'${goal.title}' ${np}% 달성! 💪`});
@@ -534,17 +694,44 @@ export default function App() {
     }
   };
 
-  const handleCreate=()=>{
+  const handleCreate=async()=>{
     if(!form.title||!form.deadline) return;
+    setCreatingChain(true);
+    const tasks = await generateGoalChain(form.title);
+    setCreatingChain(false);
     const palette=[["#FF4D00","rgba(255,77,0,.5)"],["#00E5FF","rgba(0,229,255,.5)"],["#39FF14","rgba(57,255,20,.5)"],["#FF00AA","rgba(255,0,170,.5)"],["#FFD600","rgba(255,214,0,.5)"],["#BF5FFF","rgba(191,95,255,.5)"]];
     const [color,glow]=palette[Math.floor(Math.random()*palette.length)];
-    const g={id:Date.now(),author:"나",avatar:"🦊",title:form.title,category:form.category,deadline:form.deadline,chains:1,progress:0,joined:true,color,glow,members:["🦊"],desc:form.desc||"새로운 목표에 함께해요!"};
+    const g={id:Date.now(),author:"나",avatar:"🦊",title:form.title,category:form.category,deadline:form.deadline,chains:1,progress:0,joined:true,color,glow,members:["🦊"],desc:form.desc||"AI가 실행 가능한 체인으로 설계했어요!",tasks,tokens:0};
     setGoals(p=>[g,...p]);
-    push({icon:"🎯",color,title:"목표 생성!",body:`'${form.title}' 체인 시작!`});
-    setFeed(p=>[{id:Date.now(),text:`🦊 새 목표 '${form.title}' 개설!`,time:"방금"},...p.slice(0,5)]);
+    push({icon:"🤖",color,title:"AI Goal Chain 생성!",body:`'${form.title}' 체인이 생성되었어요.`});
+    setFeed(p=>[{id:Date.now(),text:`🦊 AI가 '${form.title}' 체인 ${tasks.length}단계 설계!`,time:"방금"},...p.slice(0,5)]);
     setForm({title:"",category:"생활습관",desc:"",deadline:""});
     setShowCreate(false);
     setConfetti(true); setTimeout(()=>setConfetti(false),2000);
+  };
+
+  const handleVerify=(goal,task,proof)=>{
+    let addedTokens=TOKEN_TASK;
+    let chainComplete=false;
+    setGoals(p=>p.map(g=>{
+      if(g.id!==goal.id) return g;
+      const ts=(g.tasks||[]).map(t=>t.id===task.id?{...t,completed:true,verified:true,proof}:t);
+      const done=ts.filter(t=>t.verified).length;
+      const prog=ts.length?Math.round((done/ts.length)*100):g.progress;
+      if(prog===100){ addedTokens+=TOKEN_GOAL+TOKEN_CHAIN; chainComplete=true; }
+      return{...g,tasks:ts,progress:prog};
+    }));
+    setUserTokens(t=>t+addedTokens);
+    push({icon:"✅",color:goal.color,title:"Task 인증 완료!",body:`+${addedTokens} Token 획득!`});
+    setFeed(p=>[{id:Date.now(),text:`🦊 '${task.title}' 인증 완료 (+${addedTokens}T)`,time:"방금"},...p.slice(0,5)]);
+    setProofModal(null);
+    if(chainComplete){ setConfetti(true); setTimeout(()=>setConfetti(false),3500); setCeleb({...goal,progress:100}); setCelebAI(null); genCelebration({...goal,progress:100}).then(d=>setCelebAI(d)); }
+  };
+
+  const handleExpand=(goal)=>{
+    const newTask={id:Date.now(),title:"새 단계 (수정 가능)",order:(goal.tasks?.length||0)+1,completed:false,verified:false,proof:null};
+    setGoals(p=>p.map(g=>g.id===goal.id?{...g,tasks:[...(g.tasks||[]),newTask]}:g));
+    push({icon:"⛓",color:goal.color,title:"체인 확장!",body:"새 단계가 추가되었어요."});
   };
 
   const filtered=cat==="ALL"?goals:goals.filter(g=>g.category===cat);
@@ -597,6 +784,7 @@ export default function App() {
       <Toasts items={toasts} onX={id=>setToasts(t=>t.filter(x=>x.id!==id))}/>
       {celeb&&<Celebration goal={celeb} ai={celebAI} onClose={()=>{setCeleb(null);setCelebAI(null);}} onNext={()=>{setCeleb(null);setCelebAI(null);setCat("ALL");}}/>}
       {coach&&<CoachPanel goal={coach} onClose={()=>setCoach(null)}/>}
+      {proofModal&&<ProofModal task={proofModal.task} goal={proofModal.goal} onSubmit={(task,proof)=>handleVerify(proofModal.goal,task,proof)} onClose={()=>setProofModal(null)}/>}
 
       {/* ── HEADER ── */}
       <header style={{position:"sticky",top:0,zIndex:200,background:"rgba(6,6,10,.9)",backdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,.06)"}}>
@@ -609,6 +797,11 @@ export default function App() {
             <span style={{fontSize:11,color:"rgba(255,77,0,.7)",background:"rgba(255,77,0,.1)",border:"1px solid rgba(255,77,0,.25)",padding:"2px 8px",borderRadius:20,fontFamily:"'DM Mono',monospace",letterSpacing:".08em"}}>BETA</span>
           </div>
           <nav style={{display:"flex",gap:8,alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:6,padding:"6px 12px",background:"rgba(255,214,0,.08)",border:"1px solid rgba(255,214,0,.25)",borderRadius:10}}>
+              <span style={{fontSize:16}}>🪙</span>
+              <span style={{fontSize:14,fontWeight:800,color:"#FFD600",fontFamily:"'DM Mono',monospace"}}>{userTokens}</span>
+              <span style={{fontSize:11,color:"rgba(255,255,255,.4)"}}>Token</span>
+            </div>
             <NotifBtn log={notifs} unread={unread} onRead={()=>{setUnread(0);setNotifs(l=>l.map(n=>({...n,read:true})));}} open={notifOpen} setOpen={setNotifOpen}/>
             <span style={{fontSize:13,color:"rgba(255,255,255,.5)",marginRight:4}}>{user.nickname}님</span>
             <button onClick={()=>setUser(null)} style={{padding:"8px 14px",borderRadius:10,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.12)",color:"rgba(255,255,255,.6)",fontSize:12,fontWeight:600,cursor:"pointer"}}>로그아웃</button>
@@ -636,7 +829,7 @@ export default function App() {
               <span style={{display:"block",color:"white"}}>ACHIEVE</span>
             </h1>
             <p style={{fontSize:16,color:"rgba(255,255,255,.45)",lineHeight:1.75,maxWidth:420,marginBottom:36}}>
-              각자의 목표를 올리고, 같은 목표를 가진 사람들과 <strong style={{color:"rgba(255,255,255,.75)"}}>체인으로 연결</strong>되세요. 혼자보다 함께가 훨씬 강합니다.
+              목표를 입력하면 <strong style={{color:"#FF4D00"}}>AI가 실행 가능한 체인</strong>으로 설계하고, 같은 목표를 가진 사람들과 함께 달성해보세요. 인증하고 토큰을 모으세요.
             </p>
             <div style={{display:"flex",gap:12}}>
               <button onClick={()=>setShowCreate(true)} style={{padding:"14px 28px",borderRadius:14,background:"linear-gradient(135deg,#FF4D00,#FF7A00)",border:"none",color:"white",fontSize:15,fontWeight:800,cursor:"pointer",boxShadow:"0 8px 32px rgba(255,77,0,.5)",letterSpacing:".04em"}}>
@@ -680,14 +873,14 @@ export default function App() {
             <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,#FF4D00,transparent)"}}/>
             <div style={{fontSize:13,fontWeight:800,letterSpacing:".12em",color:"#FF4D00",marginBottom:18,fontFamily:"'DM Mono',monospace"}}>NEW GOAL CHAIN</div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-              <div style={{gridColumn:"1/-1"}}><input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="목표 제목을 입력하세요"/></div>
+              <div style={{gridColumn:"1/-1"}}><input value={form.title} onChange={e=>setForm({...form,title:e.target.value})} placeholder="예: 6개월 안에 웹 개발자로 취업 (AI가 실행 가능한 체인으로 설계)"/></div>
               <select value={form.category} onChange={e=>setForm({...form,category:e.target.value})}>{CATS.slice(1).map(c=><option key={c}>{c}</option>)}</select>
               <input type="date" value={form.deadline} onChange={e=>setForm({...form,deadline:e.target.value})}/>
               <div style={{gridColumn:"1/-1"}}><textarea rows={2} value={form.desc} onChange={e=>setForm({...form,desc:e.target.value})} placeholder="목표 설명 (선택)" style={{resize:"none"}}/></div>
             </div>
             <div style={{display:"flex",gap:8}}>
               <button onClick={()=>setShowCreate(false)} style={{padding:"12px 22px",borderRadius:12,background:"rgba(255,255,255,.06)",border:"1px solid rgba(255,255,255,.1)",color:"rgba(255,255,255,.55)",fontSize:13,fontWeight:700,cursor:"pointer",letterSpacing:".04em"}}>CANCEL</button>
-              <button onClick={handleCreate} style={{flex:1,padding:"12px 0",borderRadius:12,background:"linear-gradient(135deg,#FF4D00,#FF7A00)",border:"none",color:"white",fontSize:13,fontWeight:800,cursor:"pointer",boxShadow:"0 4px 20px rgba(255,77,0,.4)",letterSpacing:".06em"}}>⛓ LAUNCH CHAIN</button>
+              <button onClick={handleCreate} disabled={creatingChain} style={{flex:1,padding:"12px 0",borderRadius:12,background:creatingChain?"rgba(255,77,0,.5)":"linear-gradient(135deg,#FF4D00,#FF7A00)",border:"none",color:"white",fontSize:13,fontWeight:800,cursor:creatingChain?"wait":"pointer",boxShadow:creatingChain?"none":"0 4px 20px rgba(255,77,0,.4)",letterSpacing:".06em"}}>{creatingChain?"🤖 AI 체인 생성 중...":"⛓ LAUNCH CHAIN"}</button>
             </div>
           </div>
         )}
@@ -772,7 +965,7 @@ export default function App() {
       {/* ── DETAIL MODAL ── */}
       {modal&&(
         <div onClick={()=>setModal(null)} style={{position:"fixed",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(12px)",zIndex:300,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div onClick={e=>e.stopPropagation()} style={{background:"#0A0A0E",border:`1px solid ${modal.color}40`,borderRadius:24,padding:30,maxWidth:440,width:"100%",boxShadow:`0 0 80px ${modal.glow},0 40px 80px rgba(0,0,0,.7)`,animation:"riseIn .35s ease",position:"relative",overflow:"hidden"}}>
+          <div onClick={e=>e.stopPropagation()} style={{background:"#0A0A0E",border:`1px solid ${modal.color}40`,borderRadius:24,padding:30,maxWidth:440,width:"100%",maxHeight:"90vh",overflowY:"auto",boxShadow:`0 0 80px ${modal.glow},0 40px 80px rgba(0,0,0,.7)`,animation:"riseIn .35s ease",position:"relative",overflowX:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:`linear-gradient(90deg,transparent,${modal.color},transparent)`}}/>
             <div style={{display:"flex",justifyContent:"space-between",marginBottom:18}}>
               <span style={{fontSize:10,fontWeight:800,color:modal.color,background:`${modal.color}18`,border:`1px solid ${modal.color}35`,padding:"3px 11px",borderRadius:20,letterSpacing:".12em",fontFamily:"'DM Mono',monospace"}}>{modal.category}</span>
@@ -781,6 +974,7 @@ export default function App() {
             <h2 style={{fontSize:22,fontWeight:900,color:"white",marginBottom:8,letterSpacing:"-.02em"}}>{modal.title}</h2>
             <p style={{color:"rgba(255,255,255,.42)",marginBottom:20,lineHeight:1.7,fontSize:13.5}}>{modal.desc}</p>
             <div style={{display:"flex",justifyContent:"center",marginBottom:20}}><Arc progress={modal.progress} color={modal.color} glow={modal.glow} size={110}/></div>
+            <ChainView goal={modal} onVerify={t=>setProofModal({task:t,goal:modal})} onExpand={modal.joined?()=>handleExpand(modal):null} userTokens={modal.joined?userTokens:undefined}/>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:9,marginBottom:18}}>
               {[["총 체인",modal.chains+"명"],["달성률",modal.progress+"%"],["마감일",modal.deadline],["개설자",modal.avatar+" "+modal.author]].map(([l,v])=>(
                 <div key={l} style={{background:"rgba(255,255,255,.04)",borderRadius:12,padding:"10px 14px",border:"1px solid rgba(255,255,255,.05)"}}>
